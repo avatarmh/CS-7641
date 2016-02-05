@@ -1,0 +1,293 @@
+{
+ "metadata": {
+  "name": "",
+  "signature": "sha256:614a183f2aaf8d401bd8e5967c371d4c4e3c4ef88c0e2ba0d7e1293f30a3502a"
+ },
+ "nbformat": 3,
+ "nbformat_minor": 0,
+ "worksheets": [
+  {
+   "cells": [
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "import numpy as np\n",
+      "import pandas as pd\n",
+      "import scipy as sp\n",
+      "import matplotlib.pyplot as plt\n",
+      "import pydot\n",
+      "from sklearn import tree\n",
+      "from sklearn import cross_validation\n",
+      "from sklearn.metrics import confusion_matrix\n",
+      "from sklearn.metrics import accuracy_score\n",
+      "from sklearn.datasets import load_iris\n",
+      "from sklearn.externals.six import StringIO  "
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 297
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "#\n",
+      "# Goal: fit a decision tree to predict one of 3 iris species \n",
+      "# based on sepal and petal length and width and explore, if \n",
+      "# needed, reduced error pruning vs post-pruning.\n",
+      "#\n",
+      "# \u2022 Expand tree using a 90%/10% training/test set scheme by\n",
+      "#   varying the maximum depth. Reduce overfitting by con-\n",
+      "#   straining minimum samples_split to 5% of sample to be \n",
+      "#   fit (90%). Capture accuracy of training/test sets and \n",
+      "#   complexity according to maximum number of nodes. \n",
+      "# \u2022 Use K-fold cross-validation (CV) on 80%/10%/10%\n",
+      "#   training/CV/test data beginning from the the fully\n",
+      "#   expanded tree, decrementing maximum depth and using \n",
+      "#   minimum split restriction. Use K-fold CV as a post-\n",
+      "#   pruning mechanism. Capture training/CV and test set\n",
+      "#   accuracy scores.   \n",
+      "#"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 298
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "# Preliminary exploratory data analysis\n",
+      "#\n",
+      "# Load Fisher's iris data and verify dimensions\n",
+      "data_set_name = \"Fisher's Iris Data\"\n",
+      "iris = load_iris()\n",
+      "samples = iris.data.shape[0]\n",
+      "features = iris.data.shape[1]\n",
+      "classes = iris.target_names.shape[0]"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 299
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "#df = pd.read_csv(\"iris.csv\") #Reading the dataset in a dataframe using Pandas\n",
+      "#df.head(10)"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 300
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "# Separate data into randomly selected training/validation and test\n",
+      "# sets keeping the test set for final model testing. Since the iris\n",
+      "# data is so small will do a K-fold cv but will still do final\n",
+      "# test for some percent reserved for hold_out.\n",
+      "#\n",
+      "hold_out =.1\n",
+      "rand = 42\n",
+      "X_train, X_test, y_train, y_test = cross_validation.train_test_split(\n",
+      "    iris.data, iris.target, test_size=hold_out, random_state=rand)"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 301
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "clf = tree.DecisionTreeClassifier()\n",
+      "clf = clf.fit(X_train, y_train)"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 302
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "# Initialize values for the maximum depth and counters for complexity\n",
+      "# and accuracy\n",
+      "#\n",
+      "max_tesdepth = samples/(features*classes)  # heuristic\n",
+      "max_depths = range(1,max_depth+1) # fix indices to correspond with nodes\n",
+      "#\n",
+      "tot_nodes_train = []\n",
+      "acc_train = []\n",
+      "acc_test = []\n",
+      "acc_kfold = []"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 303
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "folds = 5\n",
+      "kfold = cross_validation.KFold(X_train.shape[0],n_folds=folds)"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 304
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "max_depth_obs = 1\n",
+      "for depth in max_depths:\n",
+      "    acc_k = [] # initialize to track errors for folds - initialing for each depth\n",
+      "    clf = tree.DecisionTreeClassifier(max_depth=depth)\n",
+      "    kf_clf = clf # for use in inner loop for k-fold CV\n",
+      "    clf = clf.fit(X_train, y_train) # fully grown tree s.t. min samples\n",
+      "    max_depth_obs = max(max_depth_obs, clf.tree_.max_depth)\n",
+      "    tot_nodes_train.append(clf.tree_.node_count) # works for test set too\n",
+      "    pred_y_train = clf.predict(X_train)\n",
+      "    acc_train.append(accuracy_score(y_train, pred_y_train))\n",
+      "    pred_y_test = clf.predict(X_test)\n",
+      "    acc_test.append(accuracy_score(y_test, pred_y_test))\n",
+      "# train K-fold and get test accuracy\n",
+      "    for train, test in kfold:\n",
+      "        X_ktrain = X_train[train]\n",
+      "        X_ktest = X_train[test] \n",
+      "        y_ktrain = y_train[train]\n",
+      "        y_ktest = y_train[test]        \n",
+      "        kf_clf.fit(X_ktrain,y_ktrain)\n",
+      "        pred_y_ktest = clf.predict(X_ktest)\n",
+      "        acc_k.append(accuracy_score(y_ktest,pred_y_ktest))\n",
+      "    acc_kfold.append(np.mean(acc_k))\n",
+      "print(\"FINAL TRAIN-TEST TREE: max_depth=\", max_depth_obs)\n",
+      "print(\"tot_nodes=\", tot_nodes_train[0:max_depth_obs])\n",
+      "print(\"acc_train=\", np.around(acc_train[0:max_depth_obs],4))\n",
+      "print(\"Train \", confusion_matrix(y_train, pred_y_train))\n",
+      "print(\"acc_test=\", np.around(acc_test[0:max_depth_obs],4))\n",
+      "print(\"Test \", confusion_matrix(y_test,pred_y_test))\n",
+      "print(\"acc_kfold_cv=\", np.around(acc_kfold[0:depth],4))"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "('FINAL TRAIN-TEST TREE: max_depth=', 5)\n",
+        "('tot_nodes=', [3, 5, 9, 15, 17])\n",
+        "('acc_train=', array([ 0.6741,  0.9556,  0.9704,  0.9926,  1.    ]))\n",
+        "('Train ', array([[44,  0,  0],\n",
+        "       [ 0, 44,  0],\n",
+        "       [ 0,  0, 47]]))\n",
+        "('acc_test=', array([ 0.6,  1. ,  1. ,  1. ,  1. ]))\n",
+        "('Test ', array([[6, 0, 0],\n",
+        "       [0, 6, 0],\n",
+        "       [0, 0, 3]]))\n",
+        "('acc_kfold_cv=', array([ 0.6222,  0.9481,  0.9407,  0.9407,  0.9481,  0.9481,  0.9481,\n",
+        "        0.9481,  0.9481,  0.9481,  0.9481,  0.9481]))\n"
+       ]
+      }
+     ],
+     "prompt_number": 305
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "dot_data = StringIO() \n",
+      "tree.export_graphviz(clf, out_file=dot_data, feature_names=iris.feature_names) \n",
+      "graph = pydot.graph_from_dot_data(dot_data.getvalue())\n",
+      "max_depth_str = str(max_depth)\n",
+      "test_size = str(p_test)\n",
+      "rand_num = str(rand)\n",
+      "filename = data_set_name + \"_test_\" + test_size + \"%_max_depth_\"\n",
+      "filename = filename + max_depth_str + \"_rand_\" + rand_num\n",
+      "filename_dt = filename + \"_dt.pdf\"\n",
+      "print filename_dt\n",
+      "graph.write_pdf(filename_dt)"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": [
+      {
+       "output_type": "stream",
+       "stream": "stdout",
+       "text": [
+        "Fisher's Iris Data_test_0.1%_max_depth_12_rand_42_dt.pdf\n",
+        "Warning: Could not load \"/usr/local/lib/graphviz/libgvplugin_pango.6.dylib\" - file not found\n",
+        "Warning: Could not load \"/usr/local/lib/graphviz/libgvplugin_pango.6.dylib\" - file not found\n",
+        "Warning: Could not load \"/usr/local/lib/graphviz/libgvplugin_pango.6.dylib\" - file not found\n",
+        "\n"
+       ]
+      },
+      {
+       "metadata": {},
+       "output_type": "pyout",
+       "prompt_number": 306,
+       "text": [
+        "True"
+       ]
+      }
+     ],
+     "prompt_number": 306
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [
+      "# Plot learning curves\n",
+      "plt.plot(tot_nodes_train, acc_train,'-o',label=\"Training Set\")\n",
+      "plt.plot(tot_nodes_train, acc_test,'-o', label=\"CV Set\")\n",
+      "plt.plot(tot_nodes_train, acc_kfold,'-o', label=\"Test Set\")\n",
+      "plt.xlim(1,20)\n",
+      "plt.xticks(range(21))\n",
+      "plt.title(filename)\n",
+      "plt.xlabel('Size of Tree (# nodes)')\n",
+      "plt.ylabel('Accuracy')\n",
+      "leg = plt.legend( loc = 'upper right')\n",
+      "#plt.legend(loc='upper left', bbox_to_anchor=(5, 5))\n",
+      "plt.show()"
+     ],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [],
+     "language": "python",
+     "metadata": {},
+     "outputs": [],
+     "prompt_number": 265
+    },
+    {
+     "cell_type": "code",
+     "collapsed": false,
+     "input": [],
+     "language": "python",
+     "metadata": {},
+     "outputs": []
+    }
+   ],
+   "metadata": {}
+  }
+ ]
+}
