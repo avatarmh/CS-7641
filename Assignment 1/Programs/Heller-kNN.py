@@ -42,9 +42,6 @@ from sklearn.datasets import load_digits
 # terms of bias, variance and learning curves.
 #
 
-
-# In[19]:
-
 # Exploratory data analysis to verify dataset
 #
 # Load MNIST digit data and verify dimensions

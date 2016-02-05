@@ -11,6 +11,7 @@ import numpy as np
 from sklearn.svm import SVC
 from sklearn import tree
 import matplotlib.pyplot as plt
+import matplotlib
 # get_ipython().magic(u'matplotlib inline')
 
 
@@ -45,11 +46,28 @@ for neighs in range(1,11):
     # accuracies has 5 values
     print "Mean Accuracy for ", neighs, " neighbors: ", np.mean(accuracies)
     means.append(np.mean(accuracies))
+
+def percentFormatter(y,position):
+    s = "{0:.2f}".format(y*100)
+
+    if matplotlib.rcParams['text.usetex']:
+        return s + r'$\%$'
+    else:
+        return s + "%"
+
+
 #means has 10 values
-plt.scatter(range(1,11), means)
-plt.xlabel('k-nearest neighbors')
-plt.ylabel('Accuracy')
-plt.savefig('knn.jpg')
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.plot(range(1,11), means, '-ro')
+# plt.plot(range(1,11), test_means, '-go')
+# plt.show()
+# plt.scatter(range(1,11), means)
+ax.set_title("k-NN Complexity vs Accuracy")
+ax.set_xlabel("k-nearest neighbors")
+ax.set_ylabel("Accuracy")
+ax.get_yaxis().set_major_formatter(matplotlib.ticker.FuncFormatter(percentFormatter))
+plt.savefig("knn.jpg")
 
 # In[113]:
 

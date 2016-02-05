@@ -16,15 +16,63 @@ from sklearn.metrics import accuracy_score, recall_score, confusion_matrix
 
 # Import standard scientific Python packages
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 # get ipython().magic(u'matplotlib inline')
 
 ######################
+#
+# Dataset 1
+#
+# Sci-kit subset of the MNIST database of handwritten digits 0-9. This subset consists of
+# 1797 samples with each digit depicted/store as 8x8 16 grey-scale # images. Thus each sample has 64
+# features.
+#
+# Hyperparameters to vary for model selection:
+#
+#     k - number of nearest neighbors to use to estimate target to start
+#
+#  If time permits explore:
+#
+#     Learning (Split on training/CV/test) - 70%/30%, 80%/20%, 85%/15%, 90%/10% training/test set scheme. Reduce
+#        overfitting by constraining minimum samples_split to 5% of sample to be fit (90%).
+#
+#     d(x,q) - definition of distance, e.g., Manhatten, Euclidean, Distance-Weighted, etc.
+#
+#  Models will be evaluated and selected based on the analysis of the results of parameter variation in
+#  terms of bias, variance and learning curves.
+#
 
-digits = load_digits(n_class=10)
+
+######################
+#
+#  Exploratory data analysis to verify dataset
+#
+# Load MNIST digit data and verify dimensions
+data_set_name = "MNIST Digit Dataset"
+digits = load_digits()
+samples = digits.data.shape[0]
+features = digits.data.shape[1]
+classes = digits.target_names.shape[0]
+print samples
+print features
+print classes
+print digits.target_names
+print digits.data[1:2]
+print digits.target.shape[0]
+
+# Print out examples for 0 - 9 from dataset for report
+#
+
+#pl.matshow(digits.images[12], cmap = pl.cm.gray)
+#print digits.target[12]
+#pl.show()
 
 
-# In[98]:
+
+
+
+
 
 kf = cross_validation.KFold(len(digits.target), n_folds=5)
 print kf
@@ -50,13 +98,33 @@ for neighs in range(1,11):
     # accuracies has 5 values
     print "Mean Accuracy for ", neighs, " neighbors: ", np.mean(accuracies)
     means.append(np.mean(accuracies))
-#means has 10 values
-plt.scatter(range(1,11), means)
-plt.xlabel('k-nearest neighbors')
-plt.ylabel('Accuracy')
-plt.savefig('knn.jpg')
 
-# In[113]:
+def percentFormatter(y,position):
+    s = "{0:.1f}".format(y*100)
+
+    if matplotlib.rcParams['text.usetex']:
+        return s + r'$\%$'
+    else:
+        return s + "%"
+
+# red dashes, blue squares and green triangles
+# plt.plot(t, t, 'r--', t, t**2, 'bs', t, t**3, 'g^')
+
+#means has 10 values
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.plot(range(1,11), means, '-ro')
+# plt.plot(range(1,11), test_means, '-go')
+# plt.show()
+# plt.scatter(range(1,11), means)
+ax.set_title("k-NN Accuracy vs Complexity")
+ax.set_xlabel("k-nearest neighbors")
+ax.set_ylabel("Accuracy")
+ax.get_yaxis().set_major_formatter(matplotlib.ticker.FuncFormatter(percentFormatter))
+plt.savefig("knn.jpg")
+
+
+# Exploring SVC
 
 means = []
 for c_value in range(-19,20,2):
