@@ -2,7 +2,7 @@
 # CS 7641, Spring 2016 GA Tech OMSCS
 # Asssignment 1 - due February 7, 2016
 
-# Comparison of 5 Supervised Learning Algorithms on 2 data sets - Degree of fit models
+# Comparison of 5 Supervised Learning Algorithms on 2 data sets
 
 # Import digits dataset from sk-learns's built in 0-9 digit dataset
 from sklearn.datasets import load_digits
@@ -59,34 +59,10 @@ def percentFormatter(y, position):
 
 ######################
 #
-def writePlotToFile(xAxisLabel,rangeBeg,rangeEnd,opt_model,error_scores_train,error_scores_CV):
-
-    # error_scores_CV has max_k values so add 1
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    line1, = ax.plot(range(rangeBeg, rangeEnd), error_scores_train, '-go', label='Training')
-    line2, = ax.plot(range(rangeBeg, rangeEnd), error_scores_CV, '-bs', label='CV')
-    ax.set_title("k-NN on SciKit Digits Data: Holdout Cross Validation (" + split + ")\n" + opt_model)
-    ax.set_xlabel(xAxisLabel)
-    ax.set_ylabel("Error")
-    ax.set_ylim(.0,0.1)
-    #line1, = plt.plot([3,2,1], marker='o', label='Line 1')
-    #line2, = plt.plot([1,2,3], marker='o', label='Line 2')
-    plt.legend(handler_map={line1: HandlerLine2D(numpoints=4)})
-    ax.get_yaxis().set_major_formatter(matplotlib.ticker.FuncFormatter(percentFormatter))
-    plt.savefig(filename + '.jpeg', format='jpeg')
-
-    # To remember other options
-    # red dashes, blue squares and green triangles
-    # plt.plot(t, t, 'r--', t, t**2, 'bs', t, t**3, 'g^')
-
-
-######################
-#
-# Exploratory data analysis to verify dataset values and dimensions
+# Exploratory data analysis to verify dataset
 #
 # Load MNIST digit data and verify dimensions
-data_set_name = "SciKit Digits"
+data_set_name = "MNIST Digit Dataset"
 digits = load_digits()
 samples = digits.data.shape[0]
 features = digits.data.shape[1]
@@ -95,7 +71,7 @@ print samples
 print features
 print classes
 print digits.target_names
-#print digits.data[1:2]
+print digits.data[1:2]
 print digits.target.shape[0]
 
 # Print out examples for 0 - 9 from dataset for report
@@ -137,18 +113,16 @@ print digits.target.shape[0]
 # Design plan
 #
 #
-# For k-NN, we chose to examine Model Error vs Degree of Fitness for two cross-validation methods:
-# - Holdout method where the data are randomly separated into training, cross-validation and test sets
-# - KFolds method of cross validation afterwards.
+# For k-NN, we chose to examine two cross-validation methods: . The first analysis follows the holdout method where
+# the data are randomly separated into 3 sets: 1) training set; 2) validation set; and 3) a test set. This will be
+# compare with the KFolds method of cross validation afterwards.
 #
 
-######################
-#
-# Holdout method for cross-validation
-#
-#
+# Set typeRun = {degreeOfFit, Learning} to define type of model. If degree0fFit, then k will vary; if Learning, then
+# k will not vary. Possible to have mixed runs.
 
-# Design plan - Error vs Degree of Fitness
+typeRun = "Learning"
+typeRun = 'degreeOfFit'
 
 # Run for constant holdout by selecting on one holdout amount
 holdouts = [.1,.2,.3,.4,.5,.6]
@@ -170,16 +144,24 @@ for j in holdouts:
     print 'Validation_set_size=', X_CV.shape[0]
     print 'Test_set_size=', X_test.shape[0]
 
-    # Run section of program to look at goodness of fit by manipulating the model fit with the
-    # training set, varying the number k-nearest neighbors and holding holdout in outer loop constant
+    # Run section of program to look at goodness of fit or learning curve by manipulating the model fit with the
+    # with the training set, varying the number k-nearest neighbors and holding holdout in outer loop constant
+    # or varying j in outer loop while holding k constant and choosing hyperparameters based on the validation set data
 
+    # If varying k to find optimal model, use max_k ~ 5% of training set size
     max_k = int(min(math.floor(X_train.shape[0]*.05),15))
+    start_k = 0
+
+    # If running a learning model, fix k = c such that
+    #c = 4
+    #max_k = c
+    #start_k = c-1
 
     error_scores_train = []
     error_scores_CV = []
     ks = []
 
-    for i in range(max_k):
+    for i in range(start_k,max_k):
         ks.append(i+1)
         neigh = KNeighborsClassifier(n_neighbors=i+1)
         neigh.fit(X_train,y_train)
@@ -194,11 +176,11 @@ for j in holdouts:
 
     print "Error training scores = ", error_scores_train
 
-    # Find ks = opt_k associated with the optimal error_score over all k to select model to get error on test set
-    opt_k = np.argmin(error_scores_CV) + 1
+    # Choose the ks associated with the optimal error_score over all k to select model to get error on test set
+    k_max = np.argmin(error_scores_CV) + 1
 
     # Predict y_test using training set according to optimal k from validation
-    neigh = KNeighborsClassifier(n_neighbors=opt_k)
+    neigh = KNeighborsClassifier(n_neighbors=k_max)
     neigh.fit(X_train,y_train)
 
     # Get error of optimal model defined by optimal k on training set
@@ -209,23 +191,37 @@ for j in holdouts:
     #print 'Error_scores based on training', error_scores_train
     #print 'Error scores based on validation', error_scores_CV
 
-    opt_model = " Optimal Validation Model: k=" + str(opt_k) + " with Min Test Error = " + str(test_set_error)+"%"
+    opt_model = " Optimal Validation Model: k=" + str(k_max) + " with Min Test Error = " + str(test_set_error)+"%"
     print opt_model
 
-    #np.savetxt(filename,zip(ks,error_scores_CV),delimiter=',') # don't know how to put 3 data streams into one file
+    #np.savetxt(filename,zip(ks,error_scores_CV),delimiter=',')
 
     # Generate descriptive filename
     train_pct = str(int((1.-hold_out)*100))
     test_pct = str(int((hold_out)*100/2))
 
-    xAxisLabel = "Degree of fit: k-nearest neighbors"
     split = train_pct + '_' + test_pct + '_' + test_pct
-    filename = 'dOF_kNN_' + data_set_name + '_train_' + split
+    filename = 'kNN_' + data_set_name + '_train_' + split
 
-    z = writePlotToFile(xAxisLabel,1,max_k+1,opt_model,error_scores_train,error_scores_CV)
+# red dashes, blue squares and green triangles
+# plt.plot(t, t, 'r--', t, t**2, 'bs', t, t**3, 'g^')
+
+    # error_scores_CV has max_k values so add 1
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    line1, = ax.plot(range(1, max_k+1), error_scores_train, '-go', label='Training')
+    line2, = ax.plot(range(1, max_k+1), error_scores_CV, '-bs', label='CV')
+    ax.set_title("k-NN on SciKit Digits Data: Holdout Cross Validation (" + split + ")\n" + opt_model)
+    ax.set_xlabel("Degree of fit: k-nearest neighbors")
+    ax.set_ylabel("Error")
+    ax.set_ylim(.0,0.1)
+    #line1, = plt.plot([3,2,1], marker='o', label='Line 1')
+    #line2, = plt.plot([1,2,3], marker='o', label='Line 2')
+    plt.legend(handler_map={line1: HandlerLine2D(numpoints=4)})
+    ax.get_yaxis().set_major_formatter(matplotlib.ticker.FuncFormatter(percentFormatter))
+    plt.savefig(filename + '.jpeg', format='jpeg')
 
 # finished hold out method of cross-validation
-
 
 ######################
 #
@@ -233,7 +229,7 @@ for j in holdouts:
 #
 
 kf = cross_validation.KFold(len(digits.target), n_folds=5)
-print 'kFold = ' + str(kf)
+print kf
 
 # In[99]:
 
